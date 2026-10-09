@@ -1,6 +1,6 @@
 [project]
 name = "momobase"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python SDK for the Momobase payment service API."
 readme = "README.md"
 license = "MIT"
@@ -16,5 +16,8 @@ Documentation = "https://momobasehq.github.io/sdk/"
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [build-system]
-requires = ["hatchling>=1.26"]
+requires = ["hatchling>=1.26", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
