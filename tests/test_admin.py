@@ -8,11 +8,13 @@ PAGE = {"page": 1, "total": 0, "items": [], "count": 0}
 
 
 def admin(handler):
-    return MomobaseAdminClient(
+    mb = MomobaseAdminClient(
         "https://mb.test/",
-        access_token="a1",
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
+    # A token without an expiry counts as expired, which would trigger a login.
+    mb.set_access_token("a1", expires_in_seconds=3600)
+    return mb
 
 
 def test_list_filters_encode_as_the_api_expects():
