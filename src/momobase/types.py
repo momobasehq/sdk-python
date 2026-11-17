@@ -10,7 +10,6 @@ ServiceType = Literal["collection", "disbursement"]
 TransactionStatus = Literal[
     "pending", "processing", "succeeded", "failed", "unknown", "cancelled", "expired"
 ]
-ChargeType = Literal["flat", "percentage"]
 Environment = Literal["sandbox", "production"]
 PermissionAudience = Literal["admin", "app"]
 UserStatus = Literal["active", "inactive"]
@@ -30,10 +29,12 @@ RouteSort = Literal["priority", "created_at"]
 
 
 class ChargeRule(TypedDict):
-    """Defines one charge value and calculation type."""
+    """Defines one fee: a flat amount plus a percentage of the transaction amount."""
 
-    type: ChargeType
-    value: float
+    flat: int
+    """Fixed fee in currency minor units."""
+    percentage: int
+    """Proportional fee in basis points (100 = 1%), at most 10,000."""
 
 
 class ChargeSchedule(TypedDict):
