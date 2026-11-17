@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Self
 from urllib.parse import quote
 
@@ -25,6 +26,25 @@ class TokenSnapshot:
 def _q(segment: str) -> str:
     """Escapes a resource id for use as one path segment."""
     return quote(segment, safe="")
+
+
+def _encode(value: Any) -> str | None:
+    """Renders one list query value as the API expects it, or None to leave it out.
+
+    Sequences become a comma-separated "any of", datetimes ISO 8601 (a naive one is
+    read as local time), and booleans lowercase.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, datetime):
+        aware = value if value.tzinfo else value.astimezone()
+        return aware.isoformat()
+    if isinstance(value, Sequence) and not isinstance(value, str):
+        joined = ",".join(str(part) for part in value if str(part) != "")
+        return joined or None
+    return str(value) or None
 
 
 def _unwrap(response: httpx.Response) -> Any:
@@ -148,8 +168,17 @@ class _Session:
             response = send(self._bearer(stale=token))
         return _unwrap(response)
 
-    def _list(self, path: str, page: int | None, per_page: int | None) -> Any:
-        return self._request("GET", path, params={"page": page, "per_page": per_page})
+    def _list(
+        self,
+        path: str,
+        page: int | None,
+        per_page: int | None,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        """GETs one page of a list; query holds search, sort and filters by API name."""
+        params: dict[str, Any] = {"page": page, "per_page": per_page}
+        params.update({name: _encode(value) for name, value in (query or {}).items()})
+        return self._request("GET", path, params=params)
 
 
 class _Service:

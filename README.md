@@ -77,6 +77,24 @@ or a `with` block. Requests time out after 30 seconds; pass
 Payment calls accept `idempotency_key=`; list calls accept `page=` and
 `per_page=`. All are keyword-only.
 
+Admin lists also filter, search and sort on the server. `q=` searches
+case-insensitively, `sort=` and `order=` order the list, and `created_after=` and
+`created_before=` bound the creation time (the first inclusive, the second not). Each list's own filters are exact matches, and a list of
+values matches any of them. The server rejects a filter the list does not support
+with a 400.
+
+```python
+admin.transactions.list(
+    status=["failed", "expired"],
+    app_id="app_123",
+    q="256700",
+    sort="amount",
+    order="desc",
+    created_after=datetime(2026, 1, 1, tzinfo=UTC),
+    per_page=50,
+)
+```
+
 ## Services
 
 > Each call returns the unwrapped API data as plain dicts, typed with the
@@ -113,11 +131,18 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 # Returns a single transaction by the reference the application supplied.
 🔓 mb.transactions.get_by_reference(reference)
 
-# Returns a paginated transactions list across all applications.
-🔐 admin.transactions.list(page=None, per_page=None)
+# Returns a paginated, filterable transactions list across all applications.
+🔐 admin.transactions.list(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, status=None, service_type=None, payment_method=None,
+    country=None, currency=None, app_id=None, selected_provider_account_id=None)
 
-# Returns a paginated audit logs list.
-🔐 admin.transactions.audit_logs(page=None, per_page=None)
+# Returns any application's transaction by its id.
+🔐 admin.transactions.get(transaction_id)
+
+# Returns a paginated, filterable audit logs list.
+🔐 admin.transactions.audit_logs(page=None, per_page=None, q=None, sort=None,
+    order=None, created_after=None, created_before=None, action=None, actor_type=None, actor_id=None,
+    entity_type=None, entity_id=None)
 ```
 
 ### SystemService
@@ -162,7 +187,8 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 🔐 admin.users.me()
 
 # Returns a paginated administrators list.
-🔐 admin.users.list(page=None, per_page=None)
+🔐 admin.users.list(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, role=None, status=None)
 
 # Creates an administrator.
 🔐 admin.users.create({"name": ..., "email": ..., "password": ..., "role": ...})
@@ -181,7 +207,8 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 
 ```python
 # Returns a paginated applications list.
-🔐 admin.apps.list(page=None, per_page=None)
+🔐 admin.apps.list(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, status=None, environment=None, currency=None)
 
 # Creates an application.
 🔐 admin.apps.create({"name": ..., "description": ..., "environment": ..., "currency": ..., "charges": ...})
@@ -196,7 +223,8 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 🔐 admin.apps.change_status(app_id, status)
 
 # Returns a paginated list of an application's credentials.
-🔐 admin.apps.credentials(app_id, page=None, per_page=None)
+🔐 admin.apps.credentials(app_id, page=None, per_page=None, q=None, sort=None,
+    order=None, created_after=None, created_before=None, status=None)
 
 # Creates an application credential. The secret is returned only once.
 🔐 admin.apps.create_credential(app_id, {"name": ..., "scopes": ..., "expires_at": ...})
@@ -212,7 +240,9 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 
 ```python
 # Returns a paginated provider accounts list.
-🔐 admin.providers.list(page=None, per_page=None)
+🔐 admin.providers.list(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, provider_code=None, environment=None, currency=None,
+    active=None)
 
 # Returns a single provider account by its id.
 🔐 admin.providers.get(account_id)
@@ -248,14 +278,17 @@ Payment calls accept `idempotency_key=`; list calls accept `page=` and
 🔐 admin.providers.active_balances(page=None, per_page=None)
 
 # Returns a paginated list of provider health snapshots.
-🔐 admin.providers.health(page=None, per_page=None)
+🔐 admin.providers.health(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, status=None, circuit_state=None, provider_account_id=None)
 ```
 
 ### RouteService
 
 ```python
 # Returns a paginated payment routes list.
-🔐 admin.routes.list(page=None, per_page=None)
+🔐 admin.routes.list(page=None, per_page=None, q=None, sort=None, order=None,
+    created_after=None, created_before=None, service_type=None, payment_method=None,
+    provider_account_id=None, active=None)
 
 # Creates a payment route.
 🔐 admin.routes.create(payload)
