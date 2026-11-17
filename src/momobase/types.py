@@ -1,5 +1,6 @@
 """Request and response shapes of the Momobase API, as plain dicts."""
 
+from collections.abc import Sequence
 from typing import Any, Generic, Literal, NotRequired, TypedDict, TypeVar
 
 T = TypeVar("T")
@@ -15,6 +16,17 @@ PermissionAudience = Literal["admin", "app"]
 UserStatus = Literal["active", "inactive"]
 AppStatus = Literal["active", "disabled", "suspended"]
 AnalyticsInterval = Literal["day", "hour"]
+SortOrder = Literal["asc", "desc"]
+# A filter takes one value, or several to match any of them.
+OneOrMany = T | Sequence[T]
+TransactionSort = Literal["created_at", "amount", "status", "updated_at"]
+AuditLogSort = Literal["created_at", "action"]
+AppSort = Literal["name", "status", "created_at"]
+CredentialSort = Literal["name", "status", "last_used_at", "created_at"]
+UserSort = Literal["name", "email", "created_at"]
+ProviderAccountSort = Literal["name", "provider_code", "updated_at", "created_at"]
+ProviderHealthSort = Literal["latency_ms", "consecutive_failures", "updated_at"]
+RouteSort = Literal["priority", "created_at"]
 
 
 class ChargeRule(TypedDict):

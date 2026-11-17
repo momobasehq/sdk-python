@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -12,8 +13,10 @@ from .types import (
     AnalyticsInterval,
     App,
     AppCredential,
+    AppSort,
     AppStatus,
     AuditLog,
+    AuditLogSort,
     CreateAppRequest,
     CreateCredentialRequest,
     CreatedCredential,
@@ -21,31 +24,61 @@ from .types import (
     CreateRoleRequest,
     CreateRouteRequest,
     CreateUserRequest,
+    CredentialSort,
+    Environment,
     OAuthTokenResponse,
+    OneOrMany,
     PaginatedData,
+    PaymentMethod,
     PaymentRoute,
     PermissionAudience,
     PermissionList,
     ProviderAccount,
+    ProviderAccountSort,
     ProviderBalance,
     ProviderBalanceResult,
     ProviderHealthSnapshot,
+    ProviderHealthSort,
     ProviderRegistry,
     ProviderSettings,
     Role,
     RoleList,
     RoleRequest,
+    RouteSort,
     RuntimeProvider,
+    ServiceType,
+    SortOrder,
     SystemHealth,
     SystemInfo,
     TransactionAnalytics,
+    TransactionSort,
+    TransactionStatus,
     UpdateAppRequest,
     UpdateRouteRequest,
+    UserSort,
     UserStatus,
     WorkerState,
 )
 
 _ACCOUNTS = "/api/admin/providers/accounts"
+
+
+def _search(
+    q: str | None,
+    sort: str | None,
+    order: SortOrder | None,
+    created_after: str | datetime | None,
+    created_before: str | datetime | None,
+) -> dict[str, Any]:
+    """The search, sort and created-at range every filterable list accepts. The range
+    includes created_after itself and stops short of created_before."""
+    return {
+        "q": q,
+        "sort": sort,
+        "order": order,
+        "from": created_after,
+        "to": created_before,
+    }
 
 
 class _System(_Service):
@@ -106,10 +139,25 @@ class _Users(_Service):
         return self._s._request("GET", "/api/admin/me")
 
     def list(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: UserSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        role: OneOrMany[str] | None = None,
+        status: OneOrMany[UserStatus] | None = None,
     ) -> PaginatedData[AdminUser]:
-        """Lists administrators."""
-        return self._s._list("/api/admin/users", page, per_page)
+        """Lists administrators; q searches name and email."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "role": role,
+            "status": status,
+        }
+        return self._s._list("/api/admin/users", page, per_page, query)
 
     def create(self, payload: CreateUserRequest) -> AdminUser:
         """Creates an administrator."""
@@ -138,10 +186,27 @@ class _Apps(_Service):
     """Manages applications and credentials."""
 
     def list(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: AppSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        status: OneOrMany[AppStatus] | None = None,
+        environment: OneOrMany[Environment] | None = None,
+        currency: OneOrMany[str] | None = None,
     ) -> PaginatedData[App]:
-        """Lists applications."""
-        return self._s._list("/api/admin/apps", page, per_page)
+        """Lists applications; q searches name, description and ID."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "status": status,
+            "environment": environment,
+            "currency": currency,
+        }
+        return self._s._list("/api/admin/apps", page, per_page, query)
 
     def create(self, payload: CreateAppRequest) -> App:
         """Creates an application."""
@@ -162,10 +227,26 @@ class _Apps(_Service):
         )
 
     def credentials(
-        self, app_id: str, *, page: int | None = None, per_page: int | None = None
+        self,
+        app_id: str,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: CredentialSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        status: OneOrMany[str] | None = None,
     ) -> PaginatedData[AppCredential]:
-        """Lists an application's credentials."""
-        return self._s._list(f"/api/admin/apps/{_q(app_id)}/credentials", page, per_page)
+        """Lists an application's credentials; q searches name and client ID."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "status": status,
+        }
+        return self._s._list(
+            f"/api/admin/apps/{_q(app_id)}/credentials", page, per_page, query
+        )
 
     def create_credential(
         self, app_id: str, payload: CreateCredentialRequest | None = None
@@ -194,10 +275,29 @@ class _Providers(_Service):
     """Manages provider accounts and runtime status."""
 
     def list(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: ProviderAccountSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        provider_code: OneOrMany[str] | None = None,
+        environment: OneOrMany[Environment] | None = None,
+        currency: OneOrMany[str] | None = None,
+        active: bool | None = None,
     ) -> PaginatedData[ProviderAccount]:
-        """Lists provider accounts."""
-        return self._s._list("/api/admin/providers", page, per_page)
+        """Lists provider accounts; q searches name, provider code and ID."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "provider_code": provider_code,
+            "environment": environment,
+            "currency": currency,
+            "active": active,
+        }
+        return self._s._list("/api/admin/providers", page, per_page, query)
 
     def get(self, account_id: str) -> ProviderAccount:
         """Gets a provider account."""
@@ -248,20 +348,56 @@ class _Providers(_Service):
         return self._s._list("/api/admin/balances/providers", page, per_page)
 
     def health(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: ProviderHealthSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        status: OneOrMany[str] | None = None,
+        circuit_state: OneOrMany[str] | None = None,
+        provider_account_id: OneOrMany[str] | None = None,
     ) -> PaginatedData[ProviderHealthSnapshot]:
-        """Lists provider health snapshots."""
-        return self._s._list("/api/admin/health/providers", page, per_page)
+        """Lists provider health snapshots; q searches account ID and last error."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "status": status,
+            "circuit_state": circuit_state,
+            "provider_account_id": provider_account_id,
+        }
+        return self._s._list("/api/admin/health/providers", page, per_page, query)
 
 
 class _Routes(_Service):
     """Manages payment routes."""
 
     def list(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: RouteSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        service_type: OneOrMany[ServiceType] | None = None,
+        payment_method: OneOrMany[PaymentMethod] | None = None,
+        provider_account_id: OneOrMany[str] | None = None,
+        active: bool | None = None,
     ) -> PaginatedData[PaymentRoute]:
-        """Lists payment routes."""
-        return self._s._list("/api/admin/routes", page, per_page)
+        """Lists payment routes; q searches payment method and provider account ID."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "service_type": service_type,
+            "payment_method": payment_method,
+            "provider_account_id": provider_account_id,
+            "active": active,
+        }
+        return self._s._list("/api/admin/routes", page, per_page, query)
 
     def create(self, payload: CreateRouteRequest) -> PaymentRoute:
         """Creates a payment route."""
@@ -276,16 +412,69 @@ class _Transactions(_Service):
     """Reads transactions and audit logs."""
 
     def list(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: TransactionSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        status: OneOrMany[TransactionStatus] | None = None,
+        service_type: OneOrMany[ServiceType] | None = None,
+        payment_method: OneOrMany[PaymentMethod] | None = None,
+        country: OneOrMany[str] | None = None,
+        currency: OneOrMany[str] | None = None,
+        app_id: OneOrMany[str] | None = None,
+        selected_provider_account_id: OneOrMany[str] | None = None,
     ) -> PaginatedData[AdminTransaction]:
-        """Lists transactions across all applications."""
-        return self._s._list("/api/admin/transactions", page, per_page)
+        """Lists transactions across all applications.
+
+        q searches reference, customer account, provider reference and ID.
+        """
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "status": status,
+            "service_type": service_type,
+            "payment_method": payment_method,
+            "country": country,
+            "currency": currency,
+            "app_id": app_id,
+            "selected_provider_account_id": selected_provider_account_id,
+        }
+        return self._s._list("/api/admin/transactions", page, per_page, query)
+
+    def get(self, transaction_id: str) -> AdminTransaction:
+        """Gets any application's transaction by its ID."""
+        return self._s._request("GET", f"/api/admin/transactions/{_q(transaction_id)}")
 
     def audit_logs(
-        self, *, page: int | None = None, per_page: int | None = None
+        self,
+        *,
+        page: int | None = None,
+        per_page: int | None = None,
+        q: str | None = None,
+        sort: AuditLogSort | None = None,
+        order: SortOrder | None = None,
+        created_after: str | datetime | None = None,
+        created_before: str | datetime | None = None,
+        action: OneOrMany[str] | None = None,
+        actor_type: OneOrMany[str] | None = None,
+        actor_id: OneOrMany[str] | None = None,
+        entity_type: OneOrMany[str] | None = None,
+        entity_id: OneOrMany[str] | None = None,
     ) -> PaginatedData[AuditLog]:
-        """Lists audit logs."""
-        return self._s._list("/api/admin/audit-logs", page, per_page)
+        """Lists audit logs; q searches action, entity ID, actor ID and IP address."""
+        query = {
+            **_search(q, sort, order, created_after, created_before),
+            "action": action,
+            "actor_type": actor_type,
+            "actor_id": actor_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+        }
+        return self._s._list("/api/admin/audit-logs", page, per_page, query)
 
 
 class _Analytics(_Service):
